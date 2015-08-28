@@ -1,11 +1,7 @@
-#include "temprature.h"
-#include "ds18x20_demo/onewire.h"
-#include "ds18x20_demo/ds18x20.h"
+#include "temperature.h"
+#include <string.h>
 
-#define MAXSENSORS 1
-uint8_t gSensorIDs[MAXSENSORS][OW_ROMCODE_SIZE];
-
-uint8_t temprature_init() {
+uint8_t temperature_init() {
 	uint8_t result = 0x00;
 	uint8_t nSensors = 0;
 	uint8_t diff, i;
@@ -44,19 +40,30 @@ uint8_t temprature_init() {
 	return result;
 }
 
-void tempreture_measure(char *result) {
-	uint8_t i;
-	char s[10];
-	uint8_t j=0;
-        int16_t decicelsius;
 
-	i = gSensorIDs[0][0]; // family-code for conversion-routine
-	DS18X20_start_meas( DS18X20_POWER_PARASITE, NULL );
+uint8_t temperature_measure(uint8_t *result, uint8_t length) {
+        int16_t decicelsius;
+	char s[10];
+	uint8_t temperatureLength = 10;
+	DS18X20_start_meas(DS18X20_POWER_PARASITE, NULL);
 	_delay_ms( DS18B20_TCONV_12BIT );
-	DS18X20_read_decicelsius_single( i, &decicelsius );
-	DS18X20_format_from_decicelsius( decicelsius, s, 10 );
-	/*while (s[j] != '\0' && j < 10) {
-		*(result+j) = s[j];
-		j++;
-	}*/
+	DS18X20_read_decicelsius_single(gSensorIDs[0][0], &decicelsius);
+	DS18X20_format_from_decicelsius(decicelsius, s, temperatureLength);
+
+	if (strlen(s) < temperatureLength) {
+		temperatureLength = strlen(s);
+	}
+	uint8_t *temperature = (uint8_t *) &s;
+	if (s[0] == '+') {
+		temperatureLength--;
+		temperature++;
+	}
+
+	if (temperatureLength > length + 1) {
+		temperatureLength = length;
+	}
+
+	memcpy(result, temperature, temperatureLength + 1);
+
+	return temperatureLength;
 }
